@@ -75,5 +75,5 @@ PDF SHA-256：`{pdf['sha256']}`
 
 视频 SHA-256：`{movie['sha256']}`
 '''
-(root/'app/docs/VERIFICATION.md').write_text(report,encoding='utf-8')
+(root/'app/docs/VERIFICATION.md').write_text(report,encoding='utf-8',newline='\n')
 print('Live evidence verified: PDF, images and order, PPTX, dynamic page, full video decode, API hash')
