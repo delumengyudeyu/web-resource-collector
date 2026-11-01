@@ -28,6 +28,8 @@ class JobSpec(BaseModel):
     download_selectors: list[str] = Field(default_factory=list, max_length=10)
     profile: str | None = None
     extract: bool = True
+    network_mode: Literal['system', 'direct', 'strict'] = 'system'
+    proxy_ids: list[str] = Field(default_factory=list, max_length=30)
 
     @field_validator("urls")
     @classmethod

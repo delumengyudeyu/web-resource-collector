@@ -9,3 +9,8 @@ profiles/
 runtime/
 artifacts/
 *.part
+network-settings.json
+local-config.json
+backups/
+*.argosmodel
+*.pyc

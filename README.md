@@ -1,5 +1,7 @@
 # WebCollector · 跨网站信息与原始资源采集
 
+当前版本 **0.2**：中英工作台、资源库、严格代理、本地 OCR / 中英翻译 / 语音转写及双语字幕。完整升级说明、API 示例、验收与恢复步骤见 [docs/UPGRADE.md](docs/UPGRADE.md)。新增功能有明确验证边界，尤其不是操作系统级防泄漏工具。
+
 原生 Windows 本地服务。输入一个或多个网址，通过统一 API 获取网页正文、图片、原始附件和受支持的音视频。首批实测使用中文绘本、二年级课件和一年级课堂视频，核心不绑定教育网站。
 
 ## 已部署的位置
@@ -21,7 +23,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File D:\WebCollector\app\stop.ps1
 
 本机已注册名为 `WebCollectorLocal` 的按需任务，启动器用它独立运行后台进程；没有自动定时或开机触发。服务仅监听本机，不发布公网。`register-task.ps1` 可以重新注册；没有该任务时启动器使用隐藏后台进程。诊断日志在 `logs`。
 
-本机代理 DNS 使用 `198.18.0.0/15` 虚拟地址，通过仓库外的 `local-config.json` 中 `allow_fake_ip=true` 适配；不会修改代理配置。HTTP 请求使用系统代理，回环地址直连。普通内网和文件协议目标默认拒绝。该服务供可信的本机用户使用，不是多租户或公网沙箱。
+系统模式兼容本机代理 DNS 的 `198.18.0.0/15` Fake-IP，通过仓库外 `local-config.json` 适配；Fake-IP 不代表匿名出口。0.2 新任务默认使用已配置的严格代理，配置保存在仓库外 `network-settings.json`。严格模式不使用系统环境代理覆盖，也不设回环直连例外。服务供可信本机用户使用，不是多租户或公网沙箱。
 
 ## API 示例
 
@@ -52,7 +54,7 @@ Invoke-WebRequest "http://127.0.0.1:8765/api/files/$($file.id)" -OutFile $file.f
 | `POST /api/jobs/{id}/cancel` | 取消并清理未完成文件，保留已完成文件 |
 | `POST /api/jobs/{id}/retry` | 用相同参数新建任务，原任务证据不覆盖 |
 
-每条结果的 `discovered`、`downloaded`、`extracted`、`classified` 独立记录。`classified` 当前始终为 false，没有伪装成已做教学分类。`source_pages` 为来源页，`url` 为发现地址，`final_url` 为重定向终点。媒体由外部提取器管理分段时，记录来源页和 `resource_url_note`，不冒充拥有稳定的单一下载 URL。
+每条结果的 `discovered`、`downloaded`、`extracted`、`classified` 独立记录。添加用户标签后 `classified` 为 true，方法记录为 user_tags；不冒充自动教学分类。独立内容处理任务及译文状态通过 processes API 查询。`source_pages` 为来源页，`url` 为发现地址，`final_url` 为重定向终点。媒体由提取器管理分段时，记录来源页和 `resource_url_note`。
 
 动态页面设 `browser=true`；渲染后发现资源并捕获图片、媒体及附件响应。可设置 `download_selectors: ['#download']` 点击明确的下载按钮，支持普通、POST、blob 下载。不会自动遍历所有按钮或提交任意表单。默认抓取最多 3 次滚动，并非无限滚动到底。
 
@@ -80,7 +82,7 @@ D:\WebCollector\runtime\venv\Scripts\python.exe D:\WebCollector\app\scripts\prof
 ## 已知限制
 
 - 不承诺覆盖所有网站；支付、登录、网站变动、反自动化响应和缺失下载链接会失败，需要授权登录或适配器。
-- 支持任意 HTTP 文件字节保存，不代表每种文件都能解析。当前解析 HTML、文本、PDF、DOCX、PPTX；扫描 PDF/OCR、旧版 DOC/PPT、XLSX/EPUB 的深入解析及音视频转写未实现。原件仍保留。
+- 支持任意 HTTP 文件字节保存，不代表每种文件都能解析。当前解析 HTML、文本、PDF、DOCX、PPTX、XLSX；0.2 提供独立 OCR、语音转写及中英翻译任务。旧版 DOC/PPT 与 EPUB 深入解析未覆盖，原件仍保留。模型准确性、截断范围与代理限制见升级文档。
 - 浏览器渲染失败会保留原 HTML 并写 `browser_error`；附件返回 HTML 时明确标为失败。页面快照和原文档不同，本项目不将截图或网页转 PDF 充当教材原件。
 - 本机服务不执行下载的附件。页面脚本运行在 Chromium；不要把它暴露给不受信任的公网用户。
 - 采集到的素材不随项目上传 GitHub。测试中文绘本标注 CC BY-NC 3.0，不代表获得商业产品使用授权。

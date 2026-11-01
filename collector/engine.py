@@ -14,7 +14,8 @@ from pathlib import Path
 from urllib.parse import urlsplit, urljoin
 import httpx
 import psutil
-from . import store
+from . import store, network
+from .limits import ensure_storage
 from .models import JobSpec
 from .content import absolute, discover, filename, inspect_file, extract_text, article, safe_name
 
@@ -84,6 +85,8 @@ class Collector:
         self.request_count = 0
         self.hashes = {}
         self.used = 0
+        self.started = time.monotonic()
+        self.last_progress = 0
         self.lock = asyncio.Lock()
         self.rate_lock = asyncio.Lock()
         self.next_request = 0
@@ -124,21 +127,28 @@ class Collector:
     async def run(self):
         self.job["status"] = "running"
         self.event("Started")
+        self.proxy = await network.select(self.spec)
+        self.strict = self.spec.network_mode == 'strict'
+        self.job['network'] = {'mode': self.spec.network_mode, 'proxy_id': self.proxy.id if self.proxy else None,
+                              'direct_fallback': False if self.strict else None, 'os_isolation': False}
+        self.event('Network policy selected')
         cookies = httpx.Cookies()
         if self.profile:
             state = self.profile / "storage-state.json"
             if state.exists():
                 for c in json.loads(state.read_text(encoding="utf-8")).get("cookies", []):
                     cookies.set(c["name"], c["value"], domain=c["domain"], path=c.get("path", "/"))
-        self.client = httpx.AsyncClient(timeout=self.spec.timeout_seconds, cookies=cookies, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36"}, follow_redirects=False, mounts={"all://127.0.0.1": httpx.AsyncHTTPTransport(), "all://localhost": httpx.AsyncHTTPTransport()})
+        self.client = httpx.AsyncClient(timeout=self.spec.timeout_seconds, cookies=cookies, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36"}, follow_redirects=False,
+            proxy=self.proxy.url if self.proxy else None, trust_env=self.spec.network_mode == 'system',
+            mounts={} if self.strict else {"all://127.0.0.1": httpx.AsyncHTTPTransport(), "all://localhost": httpx.AsyncHTTPTransport()})
         try:
             if self.spec.browser:
                 from playwright.async_api import async_playwright
                 self.pw = await async_playwright().start()
                 self.browser_tmp = self.folder / "browser-tmp"
                 self.browser_tmp.mkdir(exist_ok=True)
-                self.browser_engine = await self.pw.chromium.launch(headless=True, downloads_path=str(self.browser_tmp))
-                opts = {"accept_downloads": True, "viewport": {"width": 1365, "height": 900}}
+                self.browser_engine = await self.pw.chromium.launch(headless=True, downloads_path=str(self.browser_tmp), **network.browser_options(self.proxy))
+                opts = {"accept_downloads": True, "viewport": {"width": 1365, "height": 900}, 'service_workers': 'block'}
                 if self.profile and (self.profile / "storage-state.json").exists():
                     opts["storage_state"] = str(self.profile / "storage-state.json")
                 self.browser_context = await self.browser_engine.new_context(**opts)
@@ -151,7 +161,7 @@ class Collector:
                             return
                         host = urlsplit(u).netloc
                         if host not in checked:
-                            await check_url(u)
+                            await network.check_target(u, self.strict)
                             checked.add(host)
                         await route.continue_()
                     except Exception:
@@ -189,7 +199,7 @@ class Collector:
             if self.request_count >= self.spec.max_requests:
                 raise ValueError("Job exceeds max_requests")
             self.request_count += 1
-            await check_url(url)
+            await network.check_target(url, self.strict)
             await self.throttle()
             response = await self.client.send(self.client.build_request(method, url, headers=headers), stream=True)
             if response.is_redirect:
@@ -207,6 +217,8 @@ class Collector:
             temp = self.folder / (item["id"] + ".part")
             try:
                 response = await self.request("HEAD" if head_only else "GET", item["url"], headers)
+                if response.status_code in (401, 403):
+                    item['access_status'] = 'authorization_required_or_denied'
                 response.raise_for_status()
                 if head_only:
                     return None, dict(response.headers), str(response.url)
@@ -217,6 +229,7 @@ class Collector:
                 digest = hashlib.sha256()
                 with temp.open("wb") as out:
                     async for chunk in response.aiter_bytes(65536):
+                        ensure_storage(len(chunk))
                         size += len(chunk)
                         if size > self.spec.max_file_mb * 1024**2:
                             raise ValueError("File exceeds max_file_mb")
@@ -228,6 +241,10 @@ class Collector:
                             self.used += len(chunk)
                         out.write(chunk)
                         digest.update(chunk)
+                        if time.monotonic()-self.last_progress >= 1:
+                            self.last_progress=time.monotonic()
+                            self.job.update(bytes=self.used,bytes_per_second=round(self.used/max(1,time.monotonic()-self.started)),phase='downloading')
+                            store.save_job(self.job)
                 item.update(size=size, sha256=digest.hexdigest(), fetched_at=store.now(), http_status=response.status_code)
                 return temp, dict(response.headers), str(response.url)
             except (httpx.HTTPError, OSError) as exc:
@@ -420,6 +437,7 @@ class Collector:
         deadline = time.monotonic() + self.spec.timeout_seconds
         try:
             while not operation.done():
+                ensure_storage()
                 sizes = [p.stat().st_size for p in self.browser_tmp.iterdir() if p.is_file()]
                 if sum(sizes) + self.used > self.spec.max_total_mb * 1024**2 or max(sizes, default=0) > self.spec.max_file_mb * 1024**2:
                     raise ValueError("Browser download exceeds storage limit")
@@ -464,22 +482,34 @@ class Collector:
         store.save_item(record)
         if module == "yt_dlp":
             fmt = "worst[ext=mp4]/worst" if self.spec.media_quality == "low" else "bestvideo*+bestaudio/best"
-            args = ["--no-playlist", "--max-downloads", "1", "--abort-on-unavailable-fragment", "--socket-timeout", "20", "--retries", str(self.spec.retries), "--max-filesize", f"{self.spec.max_file_mb}M", "-f", fmt, "--write-subs", "--sub-langs", "zh.*,en", "--no-write-info-json", "--no-progress", "--no-warnings", "--restrict-filenames", "-o", str(folder / "%(id)s.%(ext)s")]
+            args = ["--ignore-config", "--no-playlist", "--max-downloads", "1", "--abort-on-unavailable-fragment", "--socket-timeout", "20", "--retries", str(self.spec.retries), "--max-filesize", f"{self.spec.max_file_mb}M", "-f", fmt, "--write-subs", "--sub-langs", "zh.*,en", "--no-write-info-json", "--no-progress", "--no-warnings", "--restrict-filenames", "-o", str(folder / "%(id)s.%(ext)s")]
+            if self.proxy:
+                args += ['--proxy', self.proxy.url, '--downloader', 'native', '--hls-prefer-native']
             if self.profile and (self.profile / "cookies.txt").exists():
                 args += ["--cookies", str(self.profile / "cookies.txt")]
         else:
-            args = ["--range", f"1-{min(self.spec.max_resources,100)}", "--dest", str(folder), "--no-input"]
+            args = ["--config-ignore", "--range", f"1-{min(self.spec.max_resources,100)}", "--dest", str(folder), "--no-input"]
+            if self.proxy:
+                args += ['--proxy', self.proxy.url, '-o', 'extractor.*.videos=false']
             if self.profile and (self.profile / "cookies.txt").exists():
                 args += ["--cookies", str(self.profile / "cookies.txt")]
         proc = None
         communication = None
         committed = set()
         try:
-            await check_url(parent["url"])
-            proc = await asyncio.create_subprocess_exec(sys.executable, "-m", module, *args, parent["url"], stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+            await network.check_target(parent["url"], self.strict)
+            if self.strict and module == 'gallery_dl':
+                raise ValueError('Gallery subprocess has no verified network isolation; use page images in strict mode')
+            # Native HTTP/HLS/DASH downloaders respect the explicit proxy. Prevent FFmpeg network fallback.
+            if self.strict and module == 'yt_dlp':
+                args += ['--match-filter', "protocol ~= '^(https?|m3u8_native|http_dash_segments)(\\+(https?|m3u8_native|http_dash_segments))*$'"]
+            proc = await asyncio.create_subprocess_exec(sys.executable, "-m", module, *args, parent["url"], stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                env=network.child_env(self.proxy) if self.spec.network_mode != 'system' else None,
+                creationflags=0x08000000 if os.name == 'nt' else 0)
             communication = asyncio.create_task(proc.communicate())
             deadline = time.monotonic() + 600
             while not communication.done():
+                ensure_storage()
                 size = sum(p.stat().st_size for p in folder.rglob("*") if p.is_file())
                 if self.used + size > self.spec.max_total_mb * 1024**2 or any(p.stat().st_size > self.spec.max_file_mb * 1024**2 for p in folder.rglob("*") if p.is_file()):
                     raise ValueError("Media exceeds storage limit")

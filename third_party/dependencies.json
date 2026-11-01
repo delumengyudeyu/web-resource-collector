@@ -36,6 +36,17 @@
     ]
   },
   {
+    "name": "av",
+    "version": "16.1.0",
+    "license": "BSD-3-Clause",
+    "homepage": "",
+    "project_urls": [
+      "Bug Tracker, https://github.com/PyAV-Org/PyAV/issues",
+      "Source Code, https://github.com/PyAV-Org/PyAV",
+      "homepage, https://pyav.basswood-io.com"
+    ]
+  },
+  {
     "name": "babel",
     "version": "2.18.0",
     "license": "BSD-3-Clause",
@@ -109,6 +120,18 @@
     ]
   },
   {
+    "name": "ctranslate2",
+    "version": "4.8.4",
+    "license": "MIT",
+    "homepage": "https://opennmt.net",
+    "project_urls": [
+      "Documentation, https://opennmt.net/CTranslate2",
+      "Forum, https://forum.opennmt.net",
+      "Gitter, https://gitter.im/OpenNMT/CTranslate2",
+      "Source, https://github.com/OpenNMT/CTranslate2"
+    ]
+  },
+  {
     "name": "dateparser",
     "version": "1.4.3",
     "license": "BSD-3-Clause",
@@ -116,6 +139,17 @@
     "project_urls": [
       "Source, https://github.com/scrapinghub/dateparser",
       "History, https://dateparser.readthedocs.io/en/latest/history.html"
+    ]
+  },
+  {
+    "name": "et_xmlfile",
+    "version": "2.0.0",
+    "license": "MIT",
+    "homepage": "https://foss.heptapod.net/openpyxl/et_xmlfile",
+    "project_urls": [
+      "Documentation, https://openpyxl.pages.heptapod.net/et_xmlfile/",
+      "Source, https://foss.heptapod.net/openpyxl/et_xmlfile",
+      "Tracker, https://foss.heptapod.net/openpyxl/et_xmfile/-/issues"
     ]
   },
   {
@@ -132,11 +166,51 @@
     ]
   },
   {
+    "name": "faster-whisper",
+    "version": "1.2.1",
+    "license": "MIT",
+    "homepage": "https://github.com/SYSTRAN/faster-whisper",
+    "project_urls": []
+  },
+  {
+    "name": "filelock",
+    "version": "4.2.4",
+    "license": "MIT",
+    "homepage": "",
+    "project_urls": [
+      "Documentation, https://py-filelock.readthedocs.io",
+      "Homepage, https://github.com/tox-dev/py-filelock",
+      "Source, https://github.com/tox-dev/py-filelock",
+      "Tracker, https://github.com/tox-dev/py-filelock/issues"
+    ]
+  },
+  {
     "name": "filetype",
     "version": "1.2.0",
     "license": "MIT",
     "homepage": "https://github.com/h2non/filetype.py",
     "project_urls": []
+  },
+  {
+    "name": "flatbuffers",
+    "version": "25.12.19",
+    "license": "Apache 2.0",
+    "homepage": "https://google.github.io/flatbuffers/",
+    "project_urls": [
+      "Documentation, https://google.github.io/flatbuffers/",
+      "Source, https://github.com/google/flatbuffers"
+    ]
+  },
+  {
+    "name": "fsspec",
+    "version": "2026.9.0",
+    "license": "BSD-3-Clause",
+    "homepage": "",
+    "project_urls": [
+      "Changelog, https://filesystem-spec.readthedocs.io/en/latest/changelog.html",
+      "Documentation, https://filesystem-spec.readthedocs.io/en/latest/",
+      "Homepage, https://github.com/fsspec/filesystem_spec"
+    ]
   },
   {
     "name": "gallery_dl",
@@ -166,6 +240,18 @@
     "project_urls": []
   },
   {
+    "name": "hf-xet",
+    "version": "1.7.1",
+    "license": "Apache-2.0",
+    "homepage": "",
+    "project_urls": [
+      "Documentation, https://huggingface.co/docs/hub/xet/index",
+      "Homepage, https://github.com/huggingface/xet-core",
+      "Issues, https://github.com/huggingface/xet-core/issues",
+      "Repository, https://github.com/huggingface/xet-core.git"
+    ]
+  },
+  {
     "name": "htmldate",
     "version": "1.11.0",
     "license": "Apache-2.0",
@@ -189,6 +275,17 @@
     ]
   },
   {
+    "name": "httpcore2",
+    "version": "2.16.0",
+    "license": "BSD-3-Clause",
+    "homepage": "",
+    "project_urls": [
+      "Changelog, https://github.com/pydantic/httpx2/blob/main/src/httpcore2/CHANGELOG.md",
+      "Homepage, https://github.com/pydantic/httpx2",
+      "Source, https://github.com/pydantic/httpx2/blob/main/src/httpcore2"
+    ]
+  },
+  {
     "name": "httpx",
     "version": "0.28.1",
     "license": "BSD-3-Clause",
@@ -199,6 +296,24 @@
       "Homepage, https://github.com/encode/httpx",
       "Source, https://github.com/encode/httpx"
     ]
+  },
+  {
+    "name": "httpx2",
+    "version": "2.16.0",
+    "license": "BSD-3-Clause",
+    "homepage": "",
+    "project_urls": [
+      "Changelog, https://github.com/pydantic/httpx2/blob/main/src/httpx2/CHANGELOG.md",
+      "Homepage, https://github.com/pydantic/httpx2",
+      "Source, https://github.com/pydantic/httpx2"
+    ]
+  },
+  {
+    "name": "huggingface_hub",
+    "version": "2.3.0",
+    "license": "Apache-2.0",
+    "homepage": "https://github.com/huggingface/huggingface_hub",
+    "project_urls": []
   },
   {
     "name": "idna",
@@ -244,6 +359,45 @@
     "homepage": "https://github.com/fedora-python/lxml_html_clean/",
     "project_urls": [
       "Documentation, https://lxml-html-clean.readthedocs.io/"
+    ]
+  },
+  {
+    "name": "numpy",
+    "version": "2.5.4",
+    "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+    "homepage": "",
+    "project_urls": [
+      "homepage, https://numpy.org",
+      "documentation, https://numpy.org/doc/",
+      "source, https://github.com/numpy/numpy",
+      "download, https://pypi.org/project/numpy/#files",
+      "tracker, https://github.com/numpy/numpy/issues",
+      "release notes, https://numpy.org/doc/stable/release"
+    ]
+  },
+  {
+    "name": "onnxruntime",
+    "version": "1.31.1",
+    "license": "MIT License",
+    "homepage": "https://onnxruntime.ai",
+    "project_urls": []
+  },
+  {
+    "name": "opencv-python",
+    "version": "5.0.0.93",
+    "license": "Apache 2.0",
+    "homepage": "https://github.com/opencv/opencv-python",
+    "project_urls": []
+  },
+  {
+    "name": "openpyxl",
+    "version": "3.1.5",
+    "license": "MIT",
+    "homepage": "https://openpyxl.readthedocs.io",
+    "project_urls": [
+      "Documentation, https://openpyxl.readthedocs.io/en/stable/",
+      "Source, https://foss.heptapod.net/openpyxl/openpyxl",
+      "Tracker, https://foss.heptapod.net/openpyxl/openpyxl/-/issues"
     ]
   },
   {
@@ -319,10 +473,24 @@
     ]
   },
   {
+    "name": "protobuf",
+    "version": "7.36.2",
+    "license": "3-Clause BSD License",
+    "homepage": "https://developers.google.com/protocol-buffers/",
+    "project_urls": []
+  },
+  {
     "name": "psutil",
     "version": "7.2.2",
     "license": "BSD-3-Clause",
     "homepage": "https://github.com/giampaolo/psutil",
+    "project_urls": []
+  },
+  {
+    "name": "pyclipper",
+    "version": "1.4.0",
+    "license": "MIT",
+    "homepage": "https://github.com/fonttools/pyclipper",
     "project_urls": []
   },
   {
@@ -382,6 +550,18 @@
       "Changelog, https://pypdf.readthedocs.io/en/latest/meta/CHANGELOG.html",
       "Documentation, https://pypdf.readthedocs.io/en/latest/",
       "Source, https://github.com/py-pdf/pypdf"
+    ]
+  },
+  {
+    "name": "pypdfium2",
+    "version": "5.14.0",
+    "license": "BSD-3-Clause, Apache-2.0, dependency licenses",
+    "homepage": "https://github.com/pypdfium2-team/pypdfium2",
+    "project_urls": [
+      "Source, https://github.com/pypdfium2-team/pypdfium2",
+      "Tracker, https://github.com/pypdfium2-team/pypdfium2/issues",
+      "Documentation, https://pypdfium2.readthedocs.io",
+      "Changelog, https://pypdfium2.readthedocs.io/en/stable/changelog.html"
     ]
   },
   {
@@ -456,6 +636,29 @@
     ]
   },
   {
+    "name": "PyYAML",
+    "version": "6.0.3",
+    "license": "MIT",
+    "homepage": "https://pyyaml.org/",
+    "project_urls": [
+      "Bug Tracker, https://github.com/yaml/pyyaml/issues",
+      "CI, https://github.com/yaml/pyyaml/actions",
+      "Documentation, https://pyyaml.org/wiki/PyYAMLDocumentation",
+      "Mailing lists, http://lists.sourceforge.net/lists/listinfo/yaml-core",
+      "Source Code, https://github.com/yaml/pyyaml"
+    ]
+  },
+  {
+    "name": "rapidocr-onnxruntime",
+    "version": "1.4.4",
+    "license": "Apache-2.0",
+    "homepage": "https://github.com/RapidAI/RapidOCR",
+    "project_urls": [
+      "Documentation, https://rapidai.github.io/RapidOCRDocs",
+      "Changelog, https://github.com/RapidAI/RapidOCR/releases"
+    ]
+  },
+  {
     "name": "regex",
     "version": "2026.9.29",
     "license": "Apache-2.0 AND CNRI-Python",
@@ -475,6 +678,25 @@
     ]
   },
   {
+    "name": "sentencepiece",
+    "version": "0.2.2",
+    "license": "Apache-2.0",
+    "homepage": "",
+    "project_urls": [
+      "Homepage, https://github.com/google/sentencepiece"
+    ]
+  },
+  {
+    "name": "shapely",
+    "version": "2.2.0",
+    "license": "BSD-3-Clause",
+    "homepage": "",
+    "project_urls": [
+      "Documentation, https://shapely.readthedocs.io/",
+      "Repository, https://github.com/shapely/shapely"
+    ]
+  },
+  {
     "name": "six",
     "version": "1.17.0",
     "license": "MIT",
@@ -489,6 +711,13 @@
     "project_urls": [
       "Homepage, https://github.com/facelessuser/soupsieve"
     ]
+  },
+  {
+    "name": "srt",
+    "version": "3.5.3",
+    "license": "MIT",
+    "homepage": "https://github.com/cdown/srt",
+    "project_urls": []
   },
   {
     "name": "starlette",
@@ -516,6 +745,28 @@
     ]
   },
   {
+    "name": "tokenizers",
+    "version": "0.23.3",
+    "license": "See bundled notice",
+    "homepage": "",
+    "project_urls": [
+      "Homepage, https://github.com/huggingface/tokenizers",
+      "Source, https://github.com/huggingface/tokenizers"
+    ]
+  },
+  {
+    "name": "tqdm",
+    "version": "4.70.1",
+    "license": "MPL-2.0 AND MIT",
+    "homepage": "",
+    "project_urls": [
+      "homepage, https://tqdm.github.io",
+      "repository, https://github.com/tqdm/tqdm",
+      "changelog, https://tqdm.github.io/releases",
+      "wiki, https://github.com/tqdm/tqdm/wiki"
+    ]
+  },
+  {
     "name": "trafilatura",
     "version": "2.3.1",
     "license": "Apache-2.0",
@@ -525,6 +776,16 @@
       "Source, https://github.com/adbar/trafilatura",
       "Blog, https://adrien.barbaresi.eu/blog/tag/trafilatura.html",
       "Tracker, https://github.com/adbar/trafilatura/issues"
+    ]
+  },
+  {
+    "name": "truststore",
+    "version": "0.10.5",
+    "license": "MIT",
+    "homepage": "",
+    "project_urls": [
+      "Documentation, https://truststore.readthedocs.io",
+      "Source, https://github.com/sethmlarson/truststore"
     ]
   },
   {

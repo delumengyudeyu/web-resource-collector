@@ -92,7 +92,14 @@ def extract_text(path, mime):
     if "wordprocessingml" in mime:
         from docx import Document
         doc = Document(path)
-        return "\n".join(p.text for p in doc.paragraphs), {}
+        return "\n".join(p.text for p in doc.paragraphs) + '\n\n' + '\n\n'.join('\n'.join('\t'.join(c.text for c in row.cells) for row in table.rows) for table in doc.tables), {}
+    if 'spreadsheetml' in mime:
+        from openpyxl import load_workbook
+        book=load_workbook(path,read_only=True,data_only=False)
+        try:
+            return '\n\n'.join('## '+sheet.title+'\n'+'\n'.join('\t'.join('' if c is None else str(c) for c in row) for row in sheet.iter_rows(values_only=True)) for sheet in book), {'sheets':book.sheetnames}
+        finally:
+            book.close()
     if mime.startswith("text/") or mime in ("application/json", "application/xml"):
         return path.read_text(encoding="utf-8", errors="replace")[:2_000_000], {}
     return None, {}

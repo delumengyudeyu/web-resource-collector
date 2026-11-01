@@ -11,6 +11,8 @@ for dist in distributions():
     license_id = dist.metadata.get("License-Expression") or dist.metadata.get("License", "See bundled notice")
     records.append({"name": name, "version": dist.version, "license": license_id[:300], "homepage": dist.metadata.get("Home-page", ""), "project_urls": dist.metadata.get_all("Project-URL", [])})
     for f in dist.files or []:
+        if f.suffix.lower() in ('.py','.pyc','.pyo'):
+            continue
         if ".dist-info/" in str(f) and ("license" in str(f).lower() or f.name.upper().startswith(("NOTICE", "COPYING"))):
             source = Path(dist.locate_file(f))
             if source.is_file() and source.stat().st_size < 1_000_000:
