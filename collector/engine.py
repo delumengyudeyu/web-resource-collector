@@ -266,7 +266,20 @@ class Collector:
                     temp.unlink()
                 if attempt == self.spec.retries or isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code not in (408, 429, 500, 502, 503, 504):
                     raise
-                await asyncio.sleep(0.5 * 2**attempt)
+                delay=0.5 * 2**attempt
+                if response is not None and response.status_code in (429,503):
+                    value=response.headers.get('retry-after','')
+                    if value:
+                        from email.utils import parsedate_to_datetime
+                        try:
+                            delay=max(delay,float(value))
+                        except ValueError:
+                            try:delay=max(delay,parsedate_to_datetime(value).timestamp()-time.time())
+                            except (ValueError,TypeError,OverflowError):pass
+                        if delay>self.spec.timeout_seconds:
+                            raise ValueError('Server Retry-After exceeds request wait budget; retry later')
+                if response is not None:await response.aclose()
+                await asyncio.sleep(delay)
             finally:
                 if response:
                     await response.aclose()

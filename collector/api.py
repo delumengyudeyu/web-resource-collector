@@ -36,7 +36,7 @@ async def lifespan(app):
         await profiles.finish(name,save=False)
 
 
-app = FastAPI(title="WebCollector", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="WebCollector", version="0.3.1", lifespan=lifespan)
 
 @app.exception_handler(RequestValidationError)
 async def invalid_input(request,exc):
@@ -64,7 +64,7 @@ def home():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "0.3.0", "data_dir": str(store.DATA), "adapters": ["http", "playwright", "yt-dlp", "gallery-dl"]}
+    return {"status": "ok", "version": "0.3.1", "data_dir": str(store.DATA), "adapters": ["http", "playwright", "yt-dlp", "gallery-dl"]}
 
 
 @app.post("/api/shutdown", include_in_schema=False)

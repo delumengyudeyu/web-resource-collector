@@ -105,7 +105,7 @@ class Translator:
         # Keep line boundaries and process every token. No silent context-window truncation.
         lines=[]
         for line in text.split('\n'):
-            if re.fullmatch(r'[\d\s.,:/%+()\-]+',line):
+            if re.fullmatch(r'[\d\s.,:/%+()=<>≤≥×÷^−\-]+',line):
                 lines.append(line)
                 continue
             tokens=self.tokenizer.encode(line,out_type=str)
