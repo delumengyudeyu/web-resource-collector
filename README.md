@@ -1,6 +1,6 @@
 # WebCollector · 跨网站信息与原始资源采集
 
-当前版本 **0.2**：中英工作台、资源库、严格代理、本地 OCR / 中英翻译 / 语音转写及双语字幕。完整升级说明、API 示例、验收与恢复步骤见 [docs/UPGRADE.md](docs/UPGRADE.md)。新增功能有明确验证边界，尤其不是操作系统级防泄漏工具。
+当前版本 **0.3**：最佳可用画质、可解释降级、实际媒体验证；[本轮验收与恢复](docs/QUALITY-VERIFICATION.md)。继续保留：中英工作台、资源库、严格代理、本地 OCR / 中英翻译 / 语音转写及双语字幕。完整升级说明、API 示例、验收与恢复步骤见 [docs/UPGRADE.md](docs/UPGRADE.md)。新增功能有明确验证边界，尤其不是操作系统级防泄漏工具。
 
 原生 Windows 本地服务。输入一个或多个网址，通过统一 API 获取网页正文、图片、原始附件和受支持的音视频。首批实测使用中文绘本、二年级课件和一年级课堂视频，核心不绑定教育网站。
 
@@ -58,7 +58,7 @@ Invoke-WebRequest "http://127.0.0.1:8765/api/files/$($file.id)" -OutFile $file.f
 
 动态页面设 `browser=true`；渲染后发现资源并捕获图片、媒体及附件响应。可设置 `download_selectors: ['#download']` 点击明确的下载按钮，支持普通、POST、blob 下载。不会自动遍历所有按钮或提交任意表单。默认抓取最多 3 次滚动，并非无限滚动到底。
 
-`media=true` 调用 yt-dlp；默认 `media_quality='low'` 控制带宽，需要更高清时设 `'best'` 并提高容量限制。FFmpeg 需要可在 PATH 中找到；本机已经安装。每个页面最多提取一个视频，播放列表不整批下载；字幕仅在来源提供时保存。HLS/DASH 原始清单本身与完整视频分别记录。
+`media=true` 调用 yt-dlp；默认读取持久质量设置（初始 `quality_policy='best_available'`）；可选 `cap_1080`、`cap_720`、`data_saver`。默认允许有界降级，单文件 100 MB / 任务 500 MB 预算不变。旧 `media_quality=low/best` 仍兼容；冲突返回 422。FFmpeg 需要可在 PATH 中找到；本机已经安装。每个页面最多提取一个视频，播放列表不整批下载；字幕仅在来源提供时保存。HLS/DASH 原始清单本身与完整视频分别记录。
 
 `gallery=true` 调用 gallery-dl，按其站点支持情况下载；未对所有支持站点逐一验证。普通网页图片由通用下载器处理。
 

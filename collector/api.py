@@ -8,7 +8,7 @@ from . import store, engine, processing, network, profiles
 from .limits import ensure_storage, disk_used
 from pydantic import BaseModel, Field
 from fastapi.exceptions import RequestValidationError
-from .models import JobSpec
+from .models import JobSpec, QualityPolicy
 
 
 @asynccontextmanager
@@ -36,7 +36,7 @@ async def lifespan(app):
         await profiles.finish(name,save=False)
 
 
-app = FastAPI(title="WebCollector", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="WebCollector", version="0.3.0", lifespan=lifespan)
 
 @app.exception_handler(RequestValidationError)
 async def invalid_input(request,exc):
@@ -64,7 +64,7 @@ def home():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "0.2.0", "data_dir": str(store.DATA), "adapters": ["http", "playwright", "yt-dlp", "gallery-dl"]}
+    return {"status": "ok", "version": "0.3.0", "data_dir": str(store.DATA), "adapters": ["http", "playwright", "yt-dlp", "gallery-dl"]}
 
 
 @app.post("/api/shutdown", include_in_schema=False)
@@ -77,6 +77,11 @@ def shutdown():
 
 @app.post("/api/jobs", status_code=202)
 async def create(spec: JobSpec):
+    settings=network.load()
+    if spec.quality_policy is None:
+        spec.quality_policy=settings.default_quality_policy
+    if spec.fallback_enabled is None:
+        spec.fallback_enabled=settings.default_fallback_enabled
     if 'network_mode' not in spec.model_fields_set and network.load().default_strict:
         spec.network_mode='strict'
     try:
@@ -156,12 +161,18 @@ def settings():
 class SettingsUpdate(BaseModel):
     default_strict: bool
     storage_limit_mb: int = Field(ge=500,le=1000000)
+    default_quality_policy: QualityPolicy | None = None
+    default_fallback_enabled: bool | None = None
 
 @app.patch('/api/settings')
 def update_settings(body:SettingsUpdate):
     s=network.load()
     s.default_strict=body.default_strict
     s.storage_limit_mb=body.storage_limit_mb
+    if body.default_quality_policy is not None:
+        s.default_quality_policy=body.default_quality_policy
+    if body.default_fallback_enabled is not None:
+        s.default_fallback_enabled=body.default_fallback_enabled
     network.save(s)
     return settings()
 

@@ -1,6 +1,8 @@
 from urllib.parse import urlsplit
 from typing import Literal
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+QualityPolicy = Literal['best_available','cap_1080','cap_720','data_saver']
 
 
 class JobSpec(BaseModel):
@@ -21,7 +23,21 @@ class JobSpec(BaseModel):
     scroll_steps: int = Field(default=3, ge=0, le=30)
     include_assets: bool = False
     media: bool = False
-    media_quality: Literal["low", "best"] = "low"
+    media_quality: Literal["low", "best"] | None = None
+    quality_policy: QualityPolicy | None = None
+    fallback_enabled: bool | None = None
+    max_format_attempts: int = Field(default=5,ge=1,le=15)
+    media_timeout_seconds: int = Field(default=600,ge=30,le=14400)
+    audio_language: str | None = Field(default=None,max_length=20,pattern=r'^[a-zA-Z-]+$')
+
+    @model_validator(mode='after')
+    def quality_compatibility(self):
+        if self.media_quality is not None:
+            mapped='data_saver' if self.media_quality=='low' else 'best_available'
+            if self.quality_policy is not None and self.quality_policy!=mapped:
+                raise ValueError('Conflicting media_quality and quality_policy')
+            self.quality_policy=mapped
+        return self
     gallery: bool = False
     allowed_domains: list[str] = Field(default_factory=list)
     path_prefix: str = "/"

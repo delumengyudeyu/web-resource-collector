@@ -9,6 +9,7 @@ from urllib.parse import urlsplit, unquote
 import httpx
 from pydantic import BaseModel, Field, field_validator
 from . import store
+from .models import QualityPolicy
 
 class ProxyConfig(BaseModel):
     id: str = Field(pattern=r'^[a-zA-Z0-9_-]{1,60}$')
@@ -31,6 +32,8 @@ class Settings(BaseModel):
     proxies: list[ProxyConfig] = Field(default_factory=list, max_length=30)
     default_strict: bool = False
     storage_limit_mb: int = Field(default=20000, ge=500, le=1000000)
+    default_quality_policy: QualityPolicy = 'best_available'
+    default_fallback_enabled: bool = True
 
 def path():
     return store.ROOT / 'network-settings.json'
@@ -49,6 +52,7 @@ def save(value):
 def public():
     s = load()
     return dict(default_strict=s.default_strict, storage_limit_mb=s.storage_limit_mb,
+                default_quality_policy=s.default_quality_policy,default_fallback_enabled=s.default_fallback_enabled,
                 proxies=[{'id': p.id, 'configured': True} for p in s.proxies],
                 protection='application_proxy_only',
                 limitations=['Not an OS firewall or VPN kill switch', 'The destination sees the final proxy exit',

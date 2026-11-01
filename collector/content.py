@@ -25,8 +25,26 @@ def discover(html, base, include_assets=False):
         url = absolute(base, value)
         if url:
             refs.append(dict(url=url, role=role, label=label[:300], order=len(refs)))
-    for el in soup.find_all(True):
+    for element_index, el in enumerate(soup.find_all(True)):
         tag = el.name
+        if tag=='img':
+            start=len(refs)
+            # Keep all variants; a shared element is evidence of association, not proof of identical crop.
+            variants=[]
+            for part in el.get('srcset',el.get('data-srcset','')).split(','):
+                bits=part.strip().split()
+                if bits:
+                    descriptor=bits[-1] if len(bits)>1 else '0w'
+                    try:rank=float(descriptor[:-1])
+                    except ValueError:rank=0
+                    variants.append((rank,bits[0]))
+            for attr in ('data-original','data-src'):
+                if el.get(attr):add(el[attr],'resource',el.get('alt',''))
+            for _,value in sorted(variants,reverse=True):add(value,'resource',el.get('alt',''))
+            add(el.get('src'),'resource',el.get('alt',''))
+            group=hashlib.sha256((base+'#image-'+str(element_index)).encode()).hexdigest()[:20]
+            for ref in refs[start:]:ref.update(image_group=group,image_order=element_index,association='same_element_unverified_crop')
+            continue
         if tag == "a" and el.get("href"):
             add(el["href"], "attachment" if el.has_attr("download") else "link", el.get_text(" ", strip=True))
         if tag in ("img", "source", "video", "audio", "track", "embed", "iframe", "object"):

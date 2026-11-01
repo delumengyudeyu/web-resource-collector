@@ -67,6 +67,7 @@ async def run(job):
         job["status"] = "failed"
         collector.event(f"{type(exc).__name__}: {exc}")
     finally:
+        job.update(phase=job['status'],bytes_per_second=0)
         store.save_job(job)
         RUNNING.pop(job["id"], None)
 
@@ -175,10 +176,22 @@ class Collector:
                 item, depth = self.pages.popleft()
                 await self.process(item, depth, seed=item["role"] == "seed")
             results = store.items(self.job["id"])
+            groups={}
+            for result in results:
+                if result.get('image_group') and result.get('quality',{}).get('width'):
+                    groups.setdefault(result['image_group'],[]).append(result)
+            for group in groups.values():
+                largest=max(group,key=lambda r:r['quality']['width']*r['quality']['height'])
+                for result in group:
+                    result['quality'].update(preferred_in_group=result['id']==largest['id'],group_best_item_id=largest['id'],selection_state='best_discovered' if result['id']==largest['id'] else 'unknown')
+                    store.save_item(result)
             successes = sum(r["downloaded"] for r in results)
             errors = sum(r["status"] in ("failed", "limited", "interrupted") for r in results)
             self.final_status = "completed_with_errors" if errors and successes else "failed" if errors else "completed"
-            self.job["summary"] = dict(discovered=len(results), downloaded=successes, extracted=sum(r["extracted"] for r in results), classified=0, errors=errors)
+            results=store.items(self.job['id'])
+            quality_counts={state:sum(r.get('quality',{}).get('selection_state')==state and r['downloaded'] for r in results) for state in ('best_verified','best_discovered','fallback','unknown')}
+            quality_counts['failed']=sum(r['role']=='media_job' and r['status']=='failed' for r in results)
+            self.job["summary"] = dict(discovered=len(results), downloaded=successes, extracted=sum(r["extracted"] for r in results), classified=0, errors=errors,quality=quality_counts)
             self.event("Finished")
         finally:
             if self.browser_context:
@@ -304,6 +317,24 @@ class Collector:
                 temp.replace(destination)
             temp = None
             item.update(path=str(destination.relative_to(store.DATA)), filename=name, downloaded=True, status="downloaded", adapter="http")
+            if mime.startswith('image/'):
+                try:
+                    from PIL import Image
+                    with Image.open(destination) as im:
+                        if im.width*im.height>40_000_000:raise ValueError('Image pixel inspection limit')
+                        im.verify()
+                    with Image.open(destination) as im:
+                        item['quality']=dict(width=im.width,height=im.height,selection_state='unknown',
+                            selection_basis='downloaded_image_dimensions_not_source_maximum',source_kind='source_file',validation={'probe':'passed','full_decode':'not_run'})
+                except Exception as exc:
+                    item['quality']=dict(selection_state='unknown',validation={'probe':'failed'},error=type(exc).__name__)
+            elif mime.startswith(('video/','audio/')) and 'mpegurl' not in mime:
+                try:
+                    from .media import probe
+                    item['quality']=await probe(destination,self,self.folder,time.monotonic()+60)
+                    item['quality'].update(selection_state='unknown',selection_basis='direct_file_no_variant_enumeration',source_kind='source_file')
+                except Exception as exc:
+                    item['quality']=dict(selection_state='unknown',validation={'probe':'failed'},error=network.scrub(exc))
             self.hashes[item["sha256"]] = item
             self.resource_count += 1
             store.save_item(item)
@@ -331,6 +362,9 @@ class Collector:
                 resources = []
                 for ref in refs[:self.spec.max_links_per_page]:
                     child, fresh = self.item(ref["url"], item["url"], ref["role"], ref.get("order", 0), ref.get("label", ""))
+                    if ref.get('image_group'):
+                        child.update({k:ref[k] for k in ('image_group','image_order','association')})
+                        store.save_item(child)
                     if not fresh:
                         continue
                     if ref["role"] in ("resource", "attachment"):
@@ -475,24 +509,19 @@ class Collector:
             store.save_item(item)
 
     async def external(self, parent, module):
+        if module=='yt_dlp':
+            from .media import collect
+            return await collect(self,parent)
         record, _ = self.item(parent["url"] + "#adapter=" + module, parent["url"], "media_job")
         folder = self.folder / record["id"]
         folder.mkdir(exist_ok=True)
         record.update(status="fetching", adapter=module)
         store.save_item(record)
-        if module == "yt_dlp":
-            fmt = "worst[ext=mp4]/worst" if self.spec.media_quality == "low" else "bestvideo*+bestaudio/best"
-            args = ["--ignore-config", "--no-playlist", "--max-downloads", "1", "--abort-on-unavailable-fragment", "--socket-timeout", "20", "--retries", str(self.spec.retries), "--max-filesize", f"{self.spec.max_file_mb}M", "-f", fmt, "--write-subs", "--sub-langs", "zh.*,en", "--no-write-info-json", "--no-progress", "--no-warnings", "--restrict-filenames", "-o", str(folder / "%(id)s.%(ext)s")]
-            if self.proxy:
-                args += ['--proxy', self.proxy.url, '--downloader', 'native', '--hls-prefer-native']
-            if self.profile and (self.profile / "cookies.txt").exists():
-                args += ["--cookies", str(self.profile / "cookies.txt")]
-        else:
-            args = ["--config-ignore", "--range", f"1-{min(self.spec.max_resources,100)}", "--dest", str(folder), "--no-input"]
-            if self.proxy:
-                args += ['--proxy', self.proxy.url, '-o', 'extractor.*.videos=false']
-            if self.profile and (self.profile / "cookies.txt").exists():
-                args += ["--cookies", str(self.profile / "cookies.txt")]
+        args = ["--config-ignore", "--range", f"1-{min(self.spec.max_resources,100)}", "--dest", str(folder), "--no-input"]
+        if self.proxy:
+            args += ['--proxy', self.proxy.url, '-o', 'extractor.*.videos=false']
+        if self.profile and (self.profile / "cookies.txt").exists():
+            args += ["--cookies", str(self.profile / "cookies.txt")]
         proc = None
         communication = None
         committed = set()
@@ -500,9 +529,6 @@ class Collector:
             await network.check_target(parent["url"], self.strict)
             if self.strict and module == 'gallery_dl':
                 raise ValueError('Gallery subprocess has no verified network isolation; use page images in strict mode')
-            # Native HTTP/HLS/DASH downloaders respect the explicit proxy. Prevent FFmpeg network fallback.
-            if self.strict and module == 'yt_dlp':
-                args += ['--match-filter', "protocol ~= '^(https?|m3u8_native|http_dash_segments)(\\+(https?|m3u8_native|http_dash_segments))*$'"]
             proc = await asyncio.create_subprocess_exec(sys.executable, "-m", module, *args, parent["url"], stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
                 env=network.child_env(self.proxy) if self.spec.network_mode != 'system' else None,
                 creationflags=0x08000000 if os.name == 'nt' else 0)
